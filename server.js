@@ -1,51 +1,25 @@
+require("dotenv").config();
+
 const Fastify = require("fastify");
+const mongoose = require("mongoose");
+
 const fastify = Fastify({ logger: true });
 
-let todos = [];
-let idCounter = 1;
+// Conectamos con la base de datos MongoDB
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => console.log("Conexión exitosa a MongoDB Atlas"))
+  .catch((err) => console.error("Error al conectar con la BD:", err));
 
-// Get: Listar tareas
-fastify.get("/api/todos", async (request, reply) => todos);
-
-// POST: Crear tareas
-fastify.post("/api/todos", async (request, reply) => {
-  const { title, description, date } = request.body;
-  const newTodo = {
-    id: idCounter++,
-    title,
-    description: description || "",
-    date: date || "",
-    completed: false,
-  };
-  todos.push(newTodo);
-  reply.code(201).send(newTodo);
-});
-
-// PUT: Actualizar tareas
-fastify.put("/api/todos/:id", async (request, reply) => {
-  const id = parseInt(request.params.id);
-  const index = todos.findIndex((t) => t.id === id);
-  if (index === -1) {
-    return reply.code(404).send({ error: "Tarea no encontrada" });
-  }
-  todos[index] = { ...todos[index], ...request.body, id };
-  return todos[index];
-});
-
-// DELETE: Eliminar tareas
-fastify.delete("/api/todos/:id", async (request, reply) => {
-  const id = parseInt(request.params.id);
-  const index = todos.findIndex((t) => t.id === id);
-  if (index === -1) {
-    return reply.code(404).send({ error: "Tarea no encontrada" });
-  }
-  todos.splice(index, 1);
-  reply.code(204).send();
-});
+// Registramos el archivo de rutas externalizado
+fastify.register(require("./src/routes/todo.routes"), { prefix: "/api/todos" });
 
 const start = async () => {
   try {
-    await fastify.listen({ port: 3000, host: "0.0.0.0" });
+    fastify.listen({
+      port: process.env.PORT || 3000,
+      host: "0.0.0.0",
+    });
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
